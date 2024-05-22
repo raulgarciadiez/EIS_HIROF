@@ -1,0 +1,13 @@
+R-(RC)-(RC) 
+
+at 1 V 
+R1 ~ 10 ohm
+R2 ~ 2 ohm
+R3 - very large start with 1E6 or something
+CPE1 - Q = 0.001, n = 1 (these are arbitrary but it tends to start well)
+
+at 1.58 V 
+R1 ~ 10 ohm
+R2 ~ 2 ohm
+R3 - 50 ohm
+CPE1 + CPE2 - Q = 0.001, n = 1 (these are arbitrary but it tends to start well)
