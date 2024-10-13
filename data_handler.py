@@ -1,5 +1,5 @@
 import pandas as pd
-import BioLogic
+from galvani import BioLogic
 
 class DataHandler:
     def __init__(self, file_path):
