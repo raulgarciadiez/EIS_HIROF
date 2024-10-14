@@ -1,17 +1,44 @@
+from scipy.optimize import curve_fit
+import numpy as np
+
 class FitManager:
     def __init__(self, data_handler):
         self.data_handler = data_handler
 
-    def fit_model(self, model, fmin=None, fmax=None):
-        """Fit a model to a filtered range of frequencies."""
+    def fit_model(self, model, fmin=None, fmax=None, bounds=(-np.inf, np.inf)):
+        """
+        Fit a model to a filtered range of frequencies and impedance data.
+        - model: the instance of the model to be fitted
+        - fmin, fmax: frequency range to filter
+        - bounds: optional bounds for curve fitting
+        """
+        # Filter the data based on the given frequency range
         filtered_df = self.data_handler.filter_frequencies(fmin, fmax)
 
-        x_data = filtered_df['frequencies']
-        y_data = filtered_df['<Ewe>/V']  # Replace with correct column
+        # Get the omega (frequencies) and Z (impedance) data
+        omega_data = 2 * np.pi *filtered_df['freq/Hz']
 
-        model.fit(x_data, y_data)
-        return model
+        real = filtered_df['Re(Z)/Ohm'].values
+        imaginary = -filtered_df['-Im(Z)/Ohm'].values
 
-    def fit_with_initial_params(self, model, initial_guess, fmin=None, fmax=None):
-        model.params = initial_guess
-        return self.fit_model(model, fmin, fmax)
+        Z_data = np.concatenate((real, imaginary))
+        #Z_data = filtered_df['<Ewe>/V']  # Or whatever impedance data column is correct
+
+        # Define the model function for curve fitting
+        def model_wrapper(omega, *params):
+            return model.func(omega, *params)
+
+        # Perform curve fitting using scipy's curve_fit
+        popt, pcov = curve_fit(
+            model_wrapper,
+            omega_data,
+            Z_data,
+            p0=model.params,  # Initial guess
+            bounds=bounds  # Bounds if provided
+        )
+
+        # Update model parameters with optimized values
+        model.params = popt
+
+        # Return the fitted model and covariance
+        return model, pcov
