@@ -51,6 +51,52 @@ class RCRCModel(BaseModel):
         Z_total = R0 + 1 / (1 / Z_R1C1 + 1 / Z_R2)
         return np.concatenate((np.real(Z_total), np.imag(Z_total)))
 
+import numpy as np
+from scipy.optimize import curve_fit
+
+# BaseModel, FitManager, DataHandler remain the same
+
+# Adding a class to compute fit quality
+class FitQuality:
+    
+    @staticmethod
+    def compute_residuals(actual, predicted):
+        """Compute the residuals between actual data and model predictions."""
+        return actual - predicted
+    
+    @staticmethod
+    def mean_squared_error(actual, predicted):
+        """Calculate Mean Squared Error (MSE)."""
+        residuals = FitQuality.compute_residuals(actual, predicted)
+        mse = np.mean(residuals ** 2)
+        return mse
+    
+    @staticmethod
+    def root_mean_squared_error(actual, predicted):
+        """Calculate Root Mean Squared Error (RMSE)."""
+        mse = FitQuality.mean_squared_error(actual, predicted)
+        rmse = np.sqrt(mse)
+        return rmse
+    
+    @staticmethod
+    def r_squared(actual, predicted):
+        """Calculate the R-squared value."""
+        residuals = FitQuality.compute_residuals(actual, predicted)
+        ss_res = np.sum(residuals ** 2)  # Residual sum of squares
+        ss_tot = np.sum((actual - np.mean(actual)) ** 2)  # Total sum of squares
+        r2 = 1 - (ss_res / ss_tot)
+        return r2
+    
+    @staticmethod
+    def evaluate_fit(actual, predicted):
+        """Return a dictionary of fit quality metrics."""
+        return {
+            "MSE": FitQuality.mean_squared_error(actual, predicted),
+            "RMSE": FitQuality.root_mean_squared_error(actual, predicted),
+            "R-squared": FitQuality.r_squared(actual, predicted),
+        }
+
+
 # FitManager class to handle the fitting process
 class FitManager:
     def __init__(self, data_handler):
@@ -84,7 +130,13 @@ class FitManager:
 
         # Update the model with the optimized parameters
         model.params = popt
-        return model, pcov
+
+        fitted_Z_data = model_wrapper(omega, *popt)
+
+        # Evaluate fit quality (actual vs predicted impedance)
+        fit_quality_metrics = FitQuality.evaluate_fit(Z_data, fitted_Z_data)
+
+        return model, pcov, fit_quality_metrics
 
 # DataHandler class to manage data import, filtering, and transformation
 class DataHandler:
