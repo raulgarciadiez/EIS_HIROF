@@ -5,7 +5,7 @@ class FitManager:
     def __init__(self, data_handler):
         self.data_handler = data_handler
 
-    def fit_model(self, model, fmin=None, fmax=None, bounds=(-np.inf, np.inf)):
+    def fit_model(self, model, fmin=None, fmax=None, bounds=(0, np.inf)):
         """
         Fit a model to a filtered range of frequencies and impedance data.
         - model: the instance of the model to be fitted
@@ -20,9 +20,7 @@ class FitManager:
 
         real = filtered_df['Re(Z)/Ohm'].values
         imaginary = -filtered_df['-Im(Z)/Ohm'].values
-
         Z_data = np.concatenate((real, imaginary))
-        #Z_data = filtered_df['<Ewe>/V']  # Or whatever impedance data column is correct
 
         # Define the model function for curve fitting
         def model_wrapper(omega, *params):

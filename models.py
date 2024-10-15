@@ -17,14 +17,12 @@ class RRCRCModel(Model):
         return np.concatenate((np.real(Z), np.imag(Z)))
 
     
-
-
 class RRCRCCPEModel(Model):
-    def fit(self, x_data, y_data):
-        def rrcrc_cpe_func(x, *params):
-            return params[0] * x + params[1]  # Replace with actual equation
-
-        self.params, _ = curve_fit(rrcrc_cpe_func, x_data, y_data, p0=self.params)
-
-    def predict(self, x_data):
-        return self.params[0] * x_data + self.params[1]
+    def func(self,omega, R0, R1, fs1, n1, R2, fs2, n2):
+        """
+        R-RC-RC model with CPE equation.
+        """
+        Z_R1CPE1 = R1 / (1 + (1j * omega / fs1)**n1)
+        Z_R2CPE2 = R2 / (1 + (1j * omega / fs2)**n2)
+        Z = R0 + Z_R1CPE1 + Z_R2CPE2
+        return np.concatenate((np.real(Z), np.imag(Z)))
