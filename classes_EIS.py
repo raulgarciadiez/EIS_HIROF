@@ -1,5 +1,7 @@
 import numpy as np
 from scipy.optimize import curve_fit
+import pandas as pd
+from galvani import BioLogic
 
 # Base model class with flexible parameters
 class BaseModel:
@@ -30,7 +32,7 @@ class RRCRCModel(BaseModel):
         Z_total = R0 + 1 / (1 / Z_R1C1 + 1 / Z_R2C2)
         return np.concatenate((np.real(Z_total), np.imag(Z_total)))
  
-class RRCRCCPEModel(Model):
+class RRCRCCPEModel(BaseModel):
     def impedance(self,omega, R0, R1, fs1, n1, R2, fs2, n2):
         """
         R-RC-RC model with CPE equation.
@@ -90,15 +92,14 @@ class DataHandler:
         # Load data from file
         mpr_file = BioLogic.MPRfile(filepath)
         self.df = pd.DataFrame(mpr_file.data)
+        self.Ewe = self.df["<Ewe>/V"].mean()
 
     # Method to filter frequencies based on a range
-    def filter_frequencies(self, fmin=None, fmax=None):
-        filtered_df = self.df.copy()
-        if fmin is not None:
-            filtered_df = filtered_df[filtered_df['freq/Hz'] >= fmin]
-        if fmax is not None:
-            filtered_df = filtered_df[filtered_df['freq/Hz'] <= fmax]
-        return filtered_df
+    def filter_frequencies(self, fmin=4, fmax=1e6):
+        """Filter data based on a frequency range."""
+        self.filtered_df = self.df.copy()
+        self.filtered_df = self.filtered_df[(self.filtered_df['freq/Hz'] >= fmin) & (self.filtered_df['freq/Hz'] <= fmax)& (self.filtered_df['-Im(Z)/Ohm'] > 0)]
+        return self.filtered_df
 
     # Prepare the data for fitting (frequencies and impedance)
     def prepare_data(self, filtered_df):
