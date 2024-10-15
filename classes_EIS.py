@@ -101,6 +101,7 @@ class FitQuality:
 class FitManager:
     def __init__(self, data_handler):
         self.data_handler = data_handler
+        self.previous_fitted_params = None  # Store the previous parameters
 
     # Generic method to fit a model
     def fit_model(self, model, fmin=None, fmax=None, initial_guess=None, bounds=None):
@@ -112,24 +113,35 @@ class FitManager:
         def model_wrapper(omega, *params):
             return model.impedance(omega, *params)
 
-        # Use initial guess and bounds from the model if not provided
+        # Use the previous fitted parameters as the initial guess if not provided
         if initial_guess is None:
-            initial_guess = model.get_initial_guess()
+            if self.previous_fitted_params is not None:
+                initial_guess = self.previous_fitted_params
+                print("Using previous fitted parameters as initial guess:", initial_guess)
+            else:
+                initial_guess = model.get_initial_guess()
+                print("Using default initial guess:", initial_guess)
+
+        # Use default bounds from the model if not provided
         if bounds is None:
             bounds = model.get_bounds()
 
-        # Perform curve fitting
+        # Perform the curve fitting
         popt, pcov = curve_fit(
             model_wrapper,
             omega,
             Z_data,
             p0=initial_guess,
             bounds=bounds,
-            maxfev=10000
+            maxfev=10000  # Ensure enough function evaluations
         )
 
         # Update the model with the optimized parameters
         model.params = popt
+
+        # Store the fitted parameters for future use
+        self.previous_fitted_params = popt
+        print("Storing fitted parameters for future initial guess:", self.previous_fitted_params)
 
         fitted_Z_data = model_wrapper(omega, *popt)
 
@@ -137,6 +149,11 @@ class FitManager:
         fit_quality_metrics = FitQuality.evaluate_fit(Z_data, fitted_Z_data)
 
         return model, pcov, fit_quality_metrics
+    
+    def reset_previous_parameters(self):
+        """Reset the stored fitted parameters (useful if you want to start fresh)."""
+        self.previous_fitted_params = None
+        print("Previous fitted parameters have been reset.")
 
 # DataHandler class to manage data import, filtering, and transformation
 class DataHandler:
