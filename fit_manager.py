@@ -16,19 +16,19 @@ class FitManager:
         filtered_df = self.data_handler.filter_frequencies(fmin, fmax)
 
         # Get the omega (frequencies) and Z (impedance) data
-        omega_data = 2 * np.pi *filtered_df['freq/Hz']
+        omega_data = 2 * np.pi *filtered_df['freq/Hz'].values
 
         real = filtered_df['Re(Z)/Ohm'].values
         imaginary = -filtered_df['-Im(Z)/Ohm'].values
         Z_data = np.concatenate((real, imaginary))
 
         # Define the model function for curve fitting
-        def model_wrapper(omega, *params):
-            return model.func(omega, *params)
+        #def model_wrapper(omega, *params):
+        #    return model.func(omega, *params)
 
         # Perform curve fitting using scipy's curve_fit
         popt, pcov = curve_fit(
-            model_wrapper,
+            model.func,
             omega_data,
             Z_data,
             p0=model.params,  # Initial guess
