@@ -23,12 +23,13 @@ class FitManager:
         Z_data = np.concatenate((real, imaginary))
 
         # Define the model function for curve fitting
-        #def model_wrapper(omega, *params):
-        #    return model.func(omega, *params)
+        def model_wrapper(omega, *params):
+            return model.func(omega, *params)
+
 
         # Perform curve fitting using scipy's curve_fit
         popt, pcov = curve_fit(
-            model.func,
+            model_wrapper,
             omega_data,
             Z_data,
             p0=model.params,  # Initial guess
