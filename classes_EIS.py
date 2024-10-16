@@ -95,6 +95,27 @@ class FitQuality:
             "RMSE": FitQuality.root_mean_squared_error(actual, predicted),
             "R-squared": FitQuality.r_squared(actual, predicted),
         }
+    
+
+    @staticmethod
+    def check_boundaries_hit(params, bounds, tolerance=0.01):
+        """
+        Check if any parameters are near the boundaries.
+        - `params`: The fitted parameters.
+        - `bounds`: A tuple of (lower_bounds, upper_bounds).
+        - `tolerance`: Percentage (e.g., 0.01 = 1%) within which a parameter is considered close to the boundary.
+        Returns a list of booleans indicating whether each parameter is near the boundary.
+        """
+        lower_bounds, upper_bounds = bounds
+        hit_status = []
+        for param, lower, upper in zip(params, lower_bounds, upper_bounds):
+            if abs(param - lower) / (upper - lower) < tolerance:
+                hit_status.append(True)
+            elif abs(param - upper) / (upper - lower) < tolerance:
+                hit_status.append(True)
+            else:
+                hit_status.append(False)
+        return hit_status
 
 
 # FitManager class to handle the fitting process
@@ -141,7 +162,12 @@ class FitManager:
 
         # Store the fitted parameters for future use
         self.previous_fitted_params = popt
-        print("Storing fitted parameters for future initial guess:", self.previous_fitted_params)
+        #print("Storing fitted parameters for future initial guess:", self.previous_fitted_params)
+
+        hit_boundaries = FitQuality.check_boundaries_hit(popt, bounds)
+        if any(hit_boundaries):
+            print("Warning: Some parameters are near the bounds!")
+            print("Parameters hitting bounds:", np.array(popt)[hit_boundaries])
 
         fitted_Z_data = model_wrapper(omega, *popt)
 
@@ -153,7 +179,7 @@ class FitManager:
     def reset_previous_parameters(self):
         """Reset the stored fitted parameters (useful if you want to start fresh)."""
         self.previous_fitted_params = None
-        print("Previous fitted parameters have been reset.")
+        #print("Previous fitted parameters have been reset.")
 
 # DataHandler class to manage data import, filtering, and transformation
 class DataHandler:
