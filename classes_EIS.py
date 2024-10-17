@@ -170,7 +170,7 @@ class FitManager:
                                Z_data,
                                p0=initial_guess, 
                                bounds=bounds, 
-                               maxfev=10000)
+                               maxfev=1e6)
         model.params = popt
         self.previous_fitted_params = popt  # Store for next iteration
 
