@@ -2,6 +2,15 @@ import numpy as np
 from scipy.optimize import curve_fit
 import pandas as pd
 from galvani import BioLogic
+import os
+
+def find_files(root_folder, extension):
+    file_list = []
+    for root, dirs, files in os.walk(root_folder):
+        for file in files:
+            if file.endswith(extension):
+                file_list.append(os.path.join(root, file))
+    return file_list
 
 # Base model class with flexible parameters
 class BaseModel:
@@ -138,10 +147,10 @@ class FitManager:
         if initial_guess is None:
             if self.previous_fitted_params is not None:
                 initial_guess = self.previous_fitted_params
-                print("Using previous fitted parameters as initial guess:", initial_guess)
+                #print("Using previous fitted parameters as initial guess:", initial_guess)
             else:
                 initial_guess = model.get_initial_guess()
-                print("Using default initial guess:", initial_guess)
+                #print("Using default initial guess:", initial_guess)
 
         # Use default bounds from the model if not provided
         if bounds is None:
@@ -166,15 +175,15 @@ class FitManager:
 
         hit_boundaries = FitQuality.check_boundaries_hit(popt, bounds)
         if any(hit_boundaries):
-            print("Warning: Some parameters are near the bounds!")
+            #print("Warning: Some parameters are near the bounds!")
             print("Parameters hitting bounds:", np.array(popt)[hit_boundaries])
 
         fitted_Z_data = model_wrapper(omega, *popt)
 
         # Evaluate fit quality (actual vs predicted impedance)
-        fit_quality_metrics = FitQuality.evaluate_fit(Z_data, fitted_Z_data)
+        fit_quality = FitQuality.r_squared(Z_data, fitted_Z_data)
 
-        return model, pcov, fit_quality_metrics
+        return model, pcov, fit_quality
     
     def reset_previous_parameters(self):
         """Reset the stored fitted parameters (useful if you want to start fresh)."""
@@ -185,7 +194,8 @@ class FitManager:
 class DataHandler:
     def __init__(self, filepath):
         # Load data from file
-        mpr_file = BioLogic.MPRfile(filepath)
+        self.filepath = filepath
+        mpr_file = BioLogic.MPRfile(self.filepath)
         self.df = pd.DataFrame(mpr_file.data)
         self.Ewe = self.df["<Ewe>/V"].mean()
 
