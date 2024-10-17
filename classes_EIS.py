@@ -42,14 +42,29 @@ class RRCRCModel(BaseModel):
         return np.concatenate((np.real(Z_total), np.imag(Z_total)))
  
 class RRCRCCPEModel(BaseModel):
-    def impedance(self,omega, R0, R1, fs1, n1, R2, fs2, n2):
+    def __init__(self, initial_guess=None, bounds=None):
+        super().__init__(initial_guess, bounds)
+        # Define parameter names specific to this model
+        self.param_names = ['R0', 'R1', 'fs1', "n1", 'R2', 'fs2', "n2"]
+
+    def impedance(self,omega, *params):#R0, R1, fs1, n1, R2, fs2, n2):
         """
         R-RC-RC model with CPE equation.
         """
+        R0, R1, fs1, n1, R2, fs2, n2 = params
         Z_R1CPE1 = R1 / (1 + (1j * omega / fs1)**n1)
         Z_R2CPE2 = R2 / (1 + (1j * omega / fs2)**n2)
         Z = R0 + Z_R1CPE1 + Z_R2CPE2
         return np.concatenate((np.real(Z), np.imag(Z)))
+            
+    #def impedance(self,omega, R0, R1, fs1, n1, R2, fs2, n2):
+    #    """
+    #    R-RC-RC model with CPE equation.
+    #    """
+    #    Z_R1CPE1 = R1 / (1 + (1j * omega / fs1)**n1)
+    #    Z_R2CPE2 = R2 / (1 + (1j * omega / fs2)**n2)
+    #    Z = R0 + Z_R1CPE1 + Z_R2CPE2
+    #    return np.concatenate((np.real(Z), np.imag(Z)))
     
 class RCRCModel(BaseModel):
     def impedance(self, omega, R0, R1, C1, R2):
