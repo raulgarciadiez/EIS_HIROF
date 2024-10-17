@@ -131,59 +131,53 @@ class FitQuality:
 class FitManager:
     def __init__(self, data_handler):
         self.data_handler = data_handler
-        self.previous_fitted_params = None  # Store the previous parameters
+        self.previous_fitted_params = None  # Store the fitted parameters from the previous dataset
 
-    # Generic method to fit a model
     def fit_model(self, model, fmin=None, fmax=None, initial_guess=None, bounds=None):
-        # Filter the data within the specified frequency range
+        """Fit the model to a data set."""
         filtered_df = self.data_handler.filter_frequencies(fmin, fmax)
         omega, Z_data = self.data_handler.prepare_data(filtered_df)
 
-        # Wrapper to use in curve_fit for handling varying number of parameters
         def model_wrapper(omega, *params):
             return model.impedance(omega, *params)
 
-        # Use the previous fitted parameters as the initial guess if not provided
         if initial_guess is None:
             if self.previous_fitted_params is not None:
-                initial_guess = self.previous_fitted_params
-                #print("Using previous fitted parameters as initial guess:", initial_guess)
+                initial_guess = self.previous_fitted_params  # Use previous fit parameters
             else:
                 initial_guess = model.get_initial_guess()
-                #print("Using default initial guess:", initial_guess)
 
-        # Use default bounds from the model if not provided
         if bounds is None:
             bounds = model.get_bounds()
 
-        # Perform the curve fitting
-        popt, pcov = curve_fit(
-            model_wrapper,
-            omega,
-            Z_data,
-            p0=initial_guess,
-            bounds=bounds,
-            maxfev=10000  # Ensure enough function evaluations
-        )
-
-        # Update the model with the optimized parameters
+        popt, pcov = curve_fit(model_wrapper, 
+                               omega, 
+                               Z_data,
+                               p0=initial_guess, 
+                               bounds=bounds, 
+                               maxfev=10000)
         model.params = popt
+        self.previous_fitted_params = popt  # Store for next iteration
 
-        # Store the fitted parameters for future use
-        self.previous_fitted_params = popt
-        #print("Storing fitted parameters for future initial guess:", self.previous_fitted_params)
-
-        hit_boundaries = FitQuality.check_boundaries_hit(popt, bounds)
-        if any(hit_boundaries):
-            #print("Warning: Some parameters are near the bounds!")
-            print("Parameters hitting bounds:", np.array(popt)[hit_boundaries])
-
+        # Calculate fit quality using R-squared
         fitted_Z_data = model_wrapper(omega, *popt)
-
-        # Evaluate fit quality (actual vs predicted impedance)
         fit_quality = FitQuality.r_squared(Z_data, fitted_Z_data)
 
+        #hit_boundaries = FitQuality.check_boundaries_hit(popt, bounds)
+        #if any(hit_boundaries):
+        #    print("Warning: Some parameters are near the bounds!")
+        #    print("Parameters hitting bounds:", np.array(popt)[hit_boundaries])
+
         return model, pcov, fit_quality
+    
+    def fit_multiple_files(self, model, data_handlers, fmin, fmax):
+        """Fit multiple .mpr files, using the previous file's fit parameters for the next one."""
+        for i, data_handler in enumerate(data_handlers):
+            self.data_handler = data_handler
+            print(f"Fitting file {i+1}/{len(data_handlers)}...")
+            model2, pcov, fit_quality = self.fit_model(model, fmin, fmax)
+            print(f"Fit quality (R²) for file {i+1}: {fit_quality['R_squared']}")
+        return model2
     
     def reset_previous_parameters(self):
         """Reset the stored fitted parameters (useful if you want to start fresh)."""
