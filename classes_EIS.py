@@ -184,16 +184,37 @@ class RRCRCCPEModel(BaseModel):
         Z_R2CPE2 = R2 / (1 + (1j * omega / fs2)**n2)
         Z = R0 + Z_R1CPE1 + Z_R2CPE2
         return np.concatenate((np.real(Z), np.imag(Z)))
-            
-    #def impedance(self,omega, R0, R1, fs1, n1, R2, fs2, n2):
-    #    """
-    #    R-RC-RC model with CPE equation.
-    #    """
-    #    Z_R1CPE1 = R1 / (1 + (1j * omega / fs1)**n1)
-    #    Z_R2CPE2 = R2 / (1 + (1j * omega / fs2)**n2)
-    #    Z = R0 + Z_R1CPE1 + Z_R2CPE2
-    #    return np.concatenate((np.real(Z), np.imag(Z)))
-    
+
+
+class RRCRCPoreWarburgModel(BaseModel):
+    def __init__(self, initial_guess=None, bounds=None):
+        super().__init__(initial_guess, bounds)
+        # Define parameter names specific to this model
+        self.param_names = ['R0', 'R1', 'fs1', "n1", 'R2', 'fs2', "n2", "Rpore", "W"]
+
+    def impedance(self,omega, *params):
+        """
+        R-RC-RC|Rpore-W model with CPE equation.
+        """
+        R0, R1, fs1, n1, R2, fs2, n2, Rpore, W = params
+
+
+        Z_R1CPE1 = R1 / (1 + (1j * omega / fs1)**n1)
+
+        # Second R-CPE element
+        Z_R2CPE2 = R2 / (1 + (1j * omega / fs2)**n2)
+
+        # Combine second R-CPE element with pore resistance in parallel
+        Z_R2CPE2_Rpore = (Z_R2CPE2 * Rpore) / (Z_R2CPE2 + Rpore)
+
+        # Warburg impedance for diffusion effects
+        Z_Warburg = W / np.sqrt(1j * omega)
+
+        Z = R0 + Z_R1CPE1 + Z_R2CPE2_Rpore + Z_Warburg
+
+        return np.concatenate((np.real(Z), np.imag(Z)))
+
+
 class RCRCModel(BaseModel):
     def impedance(self, omega, R0, R1, C1, R2):
         jomega = 1j * omega
