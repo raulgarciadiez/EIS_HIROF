@@ -110,6 +110,28 @@ class FitQuality:
         ss_tot = np.sum((actual - np.mean(actual)) ** 2)  # Total sum of squares
         r2 = 1 - (ss_res / ss_tot)
         return r2
+
+    @staticmethod
+    def adjusted_r_squared(actual, predicted):
+        """
+        Calculate the Adjusted R-squared value.
+
+        :param actual: The actual data points (observations).
+        :param predicted: The predicted data points from the model.
+        :param n_params: The number of fitted parameters in the model.
+        :return: Adjusted R-squared value.
+        """
+        n = len(actual)  # Number of data points
+        residuals = FitQuality.compute_residuals(actual, predicted)
+        ss_res = np.sum(residuals ** 2)  # Residual sum of squares
+        ss_tot = np.sum((actual - np.mean(actual)) ** 2)  # Total sum of squares
+        
+        r2 = 1 - (ss_res / ss_tot)  # Standard R-squared
+        
+        # Adjusted R-squared
+        r2_adj = 1 - ((1 - r2) * (n - 1)) / (n - 1)
+        
+        return r2_adj
     
     @staticmethod
     def evaluate_fit(actual, predicted):
@@ -117,7 +139,7 @@ class FitQuality:
         return {
             "MSE": FitQuality.mean_squared_error(actual, predicted),
             "RMSE": FitQuality.root_mean_squared_error(actual, predicted),
-            "R-squared": FitQuality.r_squared(actual, predicted),
+            "R-squared": FitQuality.adjusted_r_squared(actual, predicted),
         }
     
 
@@ -152,6 +174,7 @@ class FitManager:
         """Fit the model to a data set."""
         filtered_df = self.data_handler.filter_frequencies(fmin, fmax)
         omega, Z_data = self.data_handler.prepare_data(filtered_df)
+        print ("Number of points:", len(omega))
 
         def model_wrapper(omega, *params):
             return model.impedance(omega, *params)
@@ -176,7 +199,7 @@ class FitManager:
 
         # Calculate fit quality using R-squared
         fitted_Z_data = model_wrapper(omega, *popt)
-        fit_quality = FitQuality.r_squared(Z_data, fitted_Z_data)
+        fit_quality = FitQuality.adjusted_r_squared(Z_data, fitted_Z_data)
 
         #hit_boundaries = FitQuality.check_boundaries_hit(popt, bounds)
         #if any(hit_boundaries):
