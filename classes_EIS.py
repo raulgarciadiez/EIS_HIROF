@@ -4,6 +4,67 @@ import pandas as pd
 from galvani import BioLogic
 import os
 import csv
+def generate_random_bounds(bounds, perturbation=0.1, min_distance=0.1):
+    """
+    Generate random bounds for the parameters within the specified perturbation range.
+
+    Parameters:
+    - bounds: A tuple containing the lower and upper bounds as lists.
+    - perturbation: A fraction of the range to perturb the bounds by.
+    - min_distance: Minimum distance between new_lb and new_ub.
+
+    Returns:
+    - new_bounds: A tuple of the new lower and upper bounds as lists.
+    """
+    lower_bounds, upper_bounds = bounds
+    new_lower_bounds = []
+    new_upper_bounds = []
+
+    for lb, ub in zip(lower_bounds, upper_bounds):
+        valid_bounds = False
+        
+        while not valid_bounds:
+            # If the parameter is in logarithmic scale, perturb accordingly
+            if lb > 0 and ub > 0:
+                log_lb = np.log10(lb)
+                log_ub = np.log10(ub)
+                log_range = log_ub - log_lb
+
+                # Calculate maximum perturbation size in logarithmic scale
+                max_perturbation = perturbation * log_range
+
+                # Generate new lower and upper bounds in logarithmic scale
+                new_log_lb = log_lb + np.random.uniform(-max_perturbation, max_perturbation)
+                new_log_ub = log_ub + np.random.uniform(-max_perturbation, max_perturbation)
+
+                # Convert back to linear scale
+                new_lb = 10 ** new_log_lb
+                new_ub = 10 ** new_log_ub
+            else:
+                # Non-logarithmic parameters
+                range_value = ub - lb
+                max_perturbation = perturbation * range_value
+                new_lb = lb + np.random.uniform(-max_perturbation, max_perturbation)
+                new_ub = ub + np.random.uniform(-max_perturbation, max_perturbation)
+
+            # Ensure new bounds maintain a minimum distance
+            if new_ub <= new_lb + min_distance:
+                continue
+
+            # Ensure new lower bounds are greater than a minimum threshold (e.g., 0.1)
+            if new_lb < 0.1:
+                new_lb = 0.1
+
+            # Ensure new bounds are non-negative and valid
+            if new_lb < new_ub:
+                valid_bounds = True  # Valid bounds found
+
+        # Append valid bounds as standard Python floats
+        new_lower_bounds.append(float(new_lb))
+        new_upper_bounds.append(float(new_ub))
+
+    return (new_lower_bounds, new_upper_bounds)
+
 
 def write_fit_results_to_file(model, root_folder, Ewe, fmin, fmax, initial_guess, params, bounds, residual):
     """Writes the fitting results to a CSV file."""
