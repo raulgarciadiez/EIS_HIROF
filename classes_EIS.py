@@ -4,6 +4,36 @@ import pandas as pd
 from galvani import BioLogic
 import os
 import csv
+
+
+def generate_random_initial_guess(initial_guess, perturbation=0.1):
+    """
+    Generate random initial guesses based on the provided initial guess.
+    
+    Parameters:
+    - initial_guess: A list or array of initial guesses.
+    - perturbation: Fractional perturbation applied to the initial guess values.
+    
+    Returns:
+    - new_initial_guess: A list of new initial guesses.
+    """
+    new_initial_guess = []
+
+    for guess in initial_guess:
+        # Calculate the perturbation range
+        perturb_range = perturbation * abs(guess) if guess != 0 else perturbation
+
+        # Generate a new guess within the perturbation range
+        new_guess = guess + np.random.uniform(-perturb_range, perturb_range)
+
+        # Ensure the new guess is non-negative
+        if new_guess < 0:
+            new_guess = 0.1  # Set a minimum value for non-negativity
+
+        new_initial_guess.append(float(new_guess))  # Convert to standard float
+
+    return new_initial_guess
+
 def generate_random_bounds(bounds, perturbation=0.1, min_distance=0.1):
     """
     Generate random bounds for the parameters within the specified perturbation range.
