@@ -115,6 +115,7 @@ def write_fit_results_to_file(model, root_folder, Ewe, fmin, fmax, initial_guess
             # Headers for bounds (min and max for each parameter)
             for param in model.param_names:
                 header.append(f"{param}_bound_min")
+            for param in model.param_names:
                 header.append(f"{param}_bound_max")
 
             # Headers for fitted parameters and residual
@@ -123,13 +124,9 @@ def write_fit_results_to_file(model, root_folder, Ewe, fmin, fmax, initial_guess
             # Write the header row
             writer.writerow(header)
 
-        # Convert bounds into separate min and max columns
-        #bounds_min = [b[0] for b in bounds]  # Min bounds
-        #bounds_max = [b[1] for b in bounds]  # Max bounds
-
         # Write the row of fitting results
         row = [Ewe, fmin, fmax] + list(initial_guess)  # Start with Ewe, fmin, fmax, and initial guess
-        row += bounds[0] + bounds[0]  # Add bounds min and max
+        row += bounds[0] + bounds[1]  # Add bounds min and max
         row += list(params)  + [residual]  # Add fitted parameters and residual
 
         # Write the data row
