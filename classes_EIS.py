@@ -3,6 +3,46 @@ from scipy.optimize import curve_fit
 import pandas as pd
 from galvani import BioLogic
 import os
+import csv
+
+def write_fit_results_to_file(model, root_folder, Ewe, fmin, fmax, initial_guess, params, bounds, residual):
+    """Writes the fitting results to a CSV file."""
+    log_filename = f"{os.path.basename(root_folder)}_{model.__class__.__name__}_fit_log.csv"
+    filepath = os.path.join(os.getcwd(), log_filename)
+
+    # Check if file exists; if not, write the header
+    file_exists = os.path.isfile(filepath)
+
+    with open(filepath, mode='a', newline='') as file:
+        writer = csv.writer(file)
+
+        # Write the header if the file doesn't exist
+        if not file_exists:
+            # Headers for initial guesses
+            header = ['Ewe', 'fmin', 'fmax'] + [f"Initial_{param}" for param in model.param_names]
+            
+            # Headers for bounds (min and max for each parameter)
+            for param in model.param_names:
+                header.append(f"{param}_bound_min")
+                header.append(f"{param}_bound_max")
+
+            # Headers for fitted parameters and residual
+            header += [f"Fit_{param}" for param in model.param_names] + ['Residual']
+
+            # Write the header row
+            writer.writerow(header)
+
+        # Convert bounds into separate min and max columns
+        #bounds_min = [b[0] for b in bounds]  # Min bounds
+        #bounds_max = [b[1] for b in bounds]  # Max bounds
+
+        # Write the row of fitting results
+        row = [Ewe, fmin, fmax] + list(initial_guess)  # Start with Ewe, fmin, fmax, and initial guess
+        row += bounds[0] + bounds[0]  # Add bounds min and max
+        row += list(params)  + [residual]  # Add fitted parameters and residual
+
+        # Write the data row
+        writer.writerow(row)
 
 def find_files(root_folder, extension):
     file_list = []
@@ -170,11 +210,13 @@ class FitManager:
         self.data_handler = data_handler
         self.previous_fitted_params = None  # Store the fitted parameters from the previous dataset
 
+        self.Ewe = self.data_handler.Ewe
+        self.root_folder=self.data_handler.root_folder
+
     def fit_model(self, model, fmin=None, fmax=None, initial_guess=None, bounds=None):
         """Fit the model to a data set."""
         filtered_df = self.data_handler.filter_frequencies(fmin, fmax)
         omega, Z_data = self.data_handler.prepare_data(filtered_df)
-        print ("Number of points:", len(omega))
 
         def model_wrapper(omega, *params):
             return model.impedance(omega, *params)
@@ -200,7 +242,19 @@ class FitManager:
         # Calculate fit quality using R-squared
         fitted_Z_data = model_wrapper(omega, *popt)
         fit_quality = FitQuality.adjusted_r_squared(Z_data, fitted_Z_data)
-
+        
+        # Call the function to write the results to the file
+        write_fit_results_to_file(
+            model=model,  # Use the model name dynamically
+            root_folder=self.root_folder,
+            Ewe=self.Ewe,
+            fmin=fmin,
+            fmax=fmax,
+            initial_guess=initial_guess,
+            params=model.params,
+            bounds=bounds,
+            residual=fit_quality
+        )
         #hit_boundaries = FitQuality.check_boundaries_hit(popt, bounds)
         #if any(hit_boundaries):
         #    print("Warning: Some parameters are near the bounds!")
@@ -227,9 +281,17 @@ class DataHandler:
     def __init__(self, filepath):
         # Load data from file
         self.filepath = filepath
+        self.root_folder = self.extract_root_folder()
         mpr_file = BioLogic.MPRfile(self.filepath)
         self.df = pd.DataFrame(mpr_file.data)
         self.Ewe = self.df["<Ewe>/V"].mean()
+
+    def extract_root_folder(self):
+        # Get the directory of the file
+        directory = os.path.dirname(self.filepath)
+        # Extract the first subfolder from the full path
+        root_folder = os.path.split(directory)[0]  # This extracts the top-level directory
+        return root_folder
 
     # Method to filter frequencies based on a range
     def filter_frequencies(self, fmin=4, fmax=1e6):
